@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Test</title>
+		<script src="./raphael.js"></script>
+		<script src="js/jquery.js"></script>
+		<script src="./zgraphlib.js"></script>
+		<link rel="stylesheet" media="screen" type="text/css" href="css/colorpicker.css" />
+		<script type="text/javascript" src="js/colorpicker.js"></script>
+	</head>
+	<body>
+		<script>
+			window.onload = function() {
+				$('#colorpicker_container').ColorPicker({flat: true,
+						onChange: function(hsb, hex, rgb) {
+							active.color(rgb);
+						}});
+
+				var canvas_element = document.getElementById('canvas');
+				var canvas_width = canvas_element.offsetWidth - 360,
+						canvas_height = canvas_element.offsetHeight;
+				var paper = Raphael(canvas_element, canvas_width, canvas_height);
+				var back = paper.rect(0, 0, canvas_width, canvas_height).attr("fill", "#aaa");
+
+				var defaultAttributes = {'stroke': 'white', 'stroke-width': 2};
+				var activeAttributes = {'stroke': 'yellow', 'stroke-width': 2};
+				var nodes = [];
+				document.getElementById('new_node_button').onclick = function() { newNode(); };
+				function randColor() { return Math.floor(Math.random() * 256) }
+				back.dblclick(function(event) { newNode(event.offsetX, event.offsetY); });
+				function newNode(x, y) {
+					x = typeof(x) == 'undefined' ? Math.floor(Math.random() * canvas_width) : x;
+					y = typeof(y) == 'undefined' ? Math.floor(Math.random() * canvas_width) : y;
+
+					var n = new MovableNode(paper, x, y, 'New node').attr(defaultAttributes)
+							 .attr(defaultAttributes)
+							 .attr('fill', 'rgb(' + [randColor(), randColor(), randColor()] + ')');
+					setActive(n);
+					n.graphicElems.click(function(event) { 
+						if(event.shiftKey)
+							toggleEdge(this);
+						else
+							setActive(this);
+					}, n);
+					nodes.push(n);
+				}
+
+				var active = null;
+				function parseColorString(color) {
+					if(color.substr(0, 3) == 'rgb')
+					{
+						numberPattern = /\d+,\d+,\d+/;
+						numbers = color.match(numberPattern)[0].split(',');
+						return {r: numbers[0], g: numbers[1], b: numbers[2]};
+					}
+				}
+				function setActive(newActive) {
+					if(active != null)
+						active.attr(defaultAttributes);
+					active = newActive;
+					active.attr(activeAttributes);
+					active.toFront();
+					$('#content').val(active.content());
+					$('#colorpicker_container').ColorPickerSetColor(parseColorString(active.graphic.attr('fill')));
+				}
+				function toggleEdge(endnode) {
+					if(active != null) {
+						var exists = -1;
+						for(i in active.connections)
+						{
+							if(active.connections[i].endnode() === endnode)
+							{
+								exists = i;
+								break;
+							}
+						}
+						if(exists != -1)
+						{
+							active.connections[exists].destroy();
+						}
+						else
+						{
+							var newEdge = new DirEdge(paper, active, endnode).attr(defaultAttributes).attr('fill', 'white');
+							active.graphicElems.toFront();
+							endnode.graphicElems.toFront();
+						}
+					}
+				}
+				$('#content').keyup(function() {
+					if(active != null)
+					{
+						active.content($(this).val());;
+					}
+				});
+			};
+		</script>
+		<h2><u>this is a test file</u></h2>
+		<div id="panel" style="padding: 0 5px 0 5px; float: right; width: 350px; height: 500px; background-color: gray;">
+			<p>
+				Double click the canvas or hit
+				<button id="new_node_button">New node!</button>
+				to create a new node.
+			</p>
+			<p>
+				The active node is outlined in yellow and its details appear below. Shift-click a node to create an edge from the active node to the new node.
+			</p>
+			<hr />
+			<p>
+				<label for="content">Content</label>
+				<input id="content" type="text" />
+			</p>
+			<p>
+				<div id="colorpicker_container"></div>
+			</p>
+			<hr />
+			<button id="save_button">Save</button>
+		</div>
+		<div id="canvas" style="width: 100%; height: 500px; background-color: blue;">
+	</body>
+</html>
